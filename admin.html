@@ -7,9 +7,9 @@
 <title>Panel fundacji – warsztaty</title>
 <style>
   :root {
-    --bg: #f6f3ee; --card: #fff; --ink: #24302d; --muted: #66726e;
-    --accent: #2f7d6d; --accent-dark: #25645a; --line: #e2ddd3;
-    --error: #b3261e; --ok-bg: #e8f3ef; --warn-bg: #fff4d6;
+    --bg: #eceee6; --card: #fff; --ink: #12302f; --muted: #50605d;
+    --accent: #03363f; --accent-dark: #0a4a55; --line: #d9ddd0;
+    --error: #a3231b; --ok-bg: #dfe7dc; --warn-bg: #fff4d6;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
@@ -311,7 +311,9 @@ function renderEditor(w) {
 
   const err = h('p', { class: 'error', role: 'alert' });
   const rowsBox = h('div', { style: 'display:grid;gap:10px' });
-  const repeatN = h('input', { type: 'number', min: '1', max: '30', value: '3', style: 'width:80px' });
+  const repeatN = h('input', { type: 'number', min: '1', max: '30', value: '3', style: 'width:80px', 'aria-label': 'Liczba dodatkowych terminów' });
+  const repeatStep = h('select', { style: 'font:inherit;padding:8px;border-radius:8px;border:1px solid #b9b3a6', 'aria-label': 'Odstęp między terminami' },
+    h('option', { value: '7' }, 'co tydzień'), h('option', { value: '14' }, 'co 2 tygodnie'));
 
   function drawRows() {
     rowsBox.replaceChildren(...rows.map((r, i) => {
@@ -336,15 +338,20 @@ function renderEditor(w) {
     if (!last || !last.start) { err.textContent = 'Najpierw wpisz datę i godzinę pierwszego terminu.'; return; }
     err.textContent = '';
     const n = Math.min(30, Math.max(1, parseInt(repeatN.value, 10) || 1));
-    for (let i = 1; i <= n; i++) rows.push({ start: addDaysLocal(last.start, 7 * i), end: addDaysLocal(last.end, 7 * i), location: last.location, note: '' });
-    drawRows(); } }, 'Dodaj kolejne co tydzień');
+    const step = parseInt(repeatStep.value, 10) || 7;
+    for (let i = 1; i <= n; i++) rows.push({ start: addDaysLocal(last.start, step * i), end: addDaysLocal(last.end, step * i), location: last.location, note: '' });
+    drawRows(); } }, 'Dodaj kolejne terminy');
 
   const form = h('form', { class: 'grid', novalidate: true },
     h('label', {}, 'Tytuł warsztatu', h('input', { type: 'text', name: 'title', required: true, maxlength: '200', value: w ? w.title : '' })),
     h('label', {}, 'Opis (widoczny na stronie zapisów)', h('textarea', { name: 'description', maxlength: '4000' }, w && w.description ? w.description : '')),
     h('label', {}, 'Miejsce', h('input', { type: 'text', name: 'location', maxlength: '300', value: w && w.location ? w.location : '', placeholder: 'np. Warszawa, ul. Przykładowa 1 lub Online' })),
+    h('label', {}, 'Kto prowadzi (imię, nazwisko, krótki opis)', h('textarea', { name: 'facilitator', maxlength: '1500', style: 'min-height:80px' }, w && w.facilitator ? w.facilitator : '')),
+    h('label', {}, 'Dla kogo', h('input', { type: 'text', name: 'audience', maxlength: '300', value: w && w.audience ? w.audience : '', placeholder: 'np. osoby dorosłe' })),
+    h('label', {}, 'Udział / koszt', h('input', { type: 'text', name: 'cost', maxlength: '300', value: w && w.cost ? w.cost : '', placeholder: 'np. bezpłatny' })),
+    h('label', {}, 'Link „Więcej informacji” (opcjonalnie)', h('input', { type: 'text', name: 'more_info_url', maxlength: '500', value: w && w.more_info_url ? w.more_info_url : '', placeholder: 'https://…' })),
     h('div', {}, h('strong', {}, 'Terminy'), h('p', { class: 'muted', style: 'margin:2px 0 8px' }, 'Warsztat jednorazowy ma jeden termin, cykl ma kilka. Godziny w czasie polskim.'), rowsBox,
-      h('div', { class: 'row', style: 'margin-top:10px' }, addOne, h('span', { class: 'muted' }, 'lub'), addWeekly, h('span', { class: 'muted' }, 'razy:'), repeatN)),
+      h('div', { class: 'row', style: 'margin-top:10px' }, addOne, h('span', { class: 'muted' }, 'lub'), addWeekly, repeatStep, h('span', { class: 'muted' }, 'razy:'), repeatN)),
     h('label', { class: 'check' }, h('input', { type: 'checkbox', name: 'published', checked: w ? w.is_published : true }), 'Widoczny na stronie zapisów'),
     !isNew && h('p', { class: 'notice' }, 'Uwaga: zmiana terminu lub opisu nie wysyła jeszcze wiadomości do uczestników. Wysyłkę e-maili dodamy w kolejnym kroku.'),
     err,
@@ -355,6 +362,8 @@ function renderEditor(w) {
     e.preventDefault(); err.textContent = '';
     const title = form.title.value.trim();
     if (!title) { err.textContent = 'Wpisz tytuł warsztatu.'; form.title.focus(); return; }
+    const moreUrl = form.more_info_url.value.trim();
+    if (moreUrl && !/^https?:\/\//i.test(moreUrl)) { err.textContent = 'Link musi zaczynać się od https://'; form.more_info_url.focus(); return; }
     for (const r of rows) {
       if (!r.start) { err.textContent = 'Każdy termin musi mieć datę i godzinę początku.'; return; }
       if (r.end && warsawToISO(r.end) <= warsawToISO(r.start)) { err.textContent = 'Koniec musi być po początku.'; return; }
@@ -363,7 +372,9 @@ function renderEditor(w) {
     submitBtn.disabled = true;
     try {
       const payload = { title, description: form.description.value.trim() || null,
-        location: form.location.value.trim() || null, is_published: form.published.checked };
+        location: form.location.value.trim() || null, is_published: form.published.checked,
+        facilitator: form.facilitator.value.trim() || null, audience: form.audience.value.trim() || null,
+        cost: form.cost.value.trim() || null, more_info_url: moreUrl || null };
       let id;
       if (isNew) {
         const created = await api('workshops', { method: 'POST', body: payload, prefer: 'return=representation' });
