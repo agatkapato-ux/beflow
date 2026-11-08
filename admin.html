@@ -310,30 +310,45 @@ function participantsPanel(w) {
       h('button', { class: 'secondary small', onclick: () => downloadCsv(w, active) }, 'Pobierz CSV')),
     err);
 
-  if (w.signup_mode === 'all') {
-    box.append(attendeeTable(w, active, null, err));
-  } else {
+  // Jedna tabela ze wszystkimi uczestnikami i kolumną „Wybrane terminy”
+  box.append(attendeeTable(w, active, null, err, true));
+
+  // Dodatkowo listy osobno dla każdego terminu (gdy uczestnicy wybierają terminy)
+  if (w.signup_mode !== 'all') {
+    box.append(h('h3', { class: 'sess-h', style: 'margin-top:26px;font-size:1.1rem' }, 'Według terminów'));
     w.sessions.forEach((s) => {
       const list = attendeesOf(w, s.id);
       box.append(h('h3', { class: 'sess-h' }, sessionLabel(s), h('span', { class: 'badge' }, `zapisanych: ${list.length}`)));
-      if (list.length) box.append(copyButton('Kopiuj e-maile z tego terminu', list.map((x) => x.email)), attendeeTable(w, list, s, err));
+      if (list.length) box.append(copyButton('Kopiuj e-maile z tego terminu', list.map((x) => x.email)), attendeeTable(w, list, s, err, false));
       else box.append(h('p', { class: 'muted', style: 'margin:0' }, 'Nikt nie zapisał się na ten termin.'));
     });
   }
   return box;
 }
 
-function attendeeTable(w, list, sess, err) {
+// Na które terminy zapisana jest dana osoba
+function chosenDates(w, su) {
+  if (w.signup_mode === 'all') return ['Wszystkie terminy'];
+  const ids = (su.signup_sessions || []).map((x) => x.session_id);
+  return w.sessions.filter((x) => ids.includes(x.id)).map((x) => fmtShort.format(new Date(x.starts_at)));
+}
+
+function attendeeTable(w, list, sess, err, showDates) {
   return h('table', {},
-    h('thead', {}, h('tr', {}, h('th', {}, 'Imię i nazwisko'), h('th', {}, 'E-mail'), h('th', {}, 'Zapisano'), h('th', {}, ''))),
+    h('thead', {}, h('tr', {},
+      h('th', {}, 'Imię i nazwisko'), h('th', {}, 'E-mail'),
+      showDates && h('th', {}, 'Wybrane terminy'),
+      h('th', {}, 'Zapisano'), h('th', {}, ''))),
     h('tbody', {}, list.map((s) => h('tr', {},
-      h('td', {}, s.full_name), h('td', {}, s.email), h('td', {}, fmtShort.format(new Date(s.created_at))),
+      h('td', {}, s.full_name), h('td', {}, s.email),
+      showDates && h('td', {}, chosenDates(w, s).map((t) => h('div', {}, t))),
+      h('td', {}, fmtShort.format(new Date(s.created_at))),
       h('td', {}, h('button', { class: 'danger small', onclick: () => removeAttendee(s, sess, err) }, sess ? 'Usuń z terminu' : 'Usuń'))))));
 }
 
 async function removeAttendee(s, sess, err) {
   err.textContent = '';
-  const msg = sess ? `Usunąć ${s.full_name} z terminu: ${sessionLabel(sess)}?` : `Usunąć z listy: ${s.full_name}?`;
+  const msg = sess ? `Usunąć ${s.full_name} z terminu: ${sessionLabel(sess)}?` : `Usunąć z listy: ${s.full_name}? (ze wszystkich terminów)`;
   if (!confirm(msg)) return;
   const nowISO = new Date().toISOString();
   try {
