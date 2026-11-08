@@ -3,78 +3,99 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zapisy na warsztaty</title>
+<title>Zapisy na warsztaty – Fundacja BeFlow</title>
 <style>
   :root {
-    --bg: #f6f3ee;
-    --card: #ffffff;
-    --ink: #24302d;
-    --muted: #66726e;
-    --accent: #2f7d6d;
-    --accent-dark: #25645a;
-    --line: #e2ddd3;
-    --error: #b3261e;
-    --ok-bg: #e8f3ef;
+    --sage: #9aa795;
+    --teal: #03363f;
+    --teal2: #0a4a55;
+    --cream: #e6e4d6;
+    --card: #f6f5ee;
+    --ink: #12302f;
+    --muted: #455653;
+    --line: #cfd3c4;
+    --error: #a3231b;
+    --ok-bg: #e1eadf;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--bg);
+    background: var(--sage);
     color: var(--ink);
-    font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 17px/1.55 Montserrat, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
-  header { padding: 36px 0 12px; }
-  h1 { margin: 0 0 6px; font-size: 1.9rem; line-height: 1.2; }
-  .lead { margin: 0; color: var(--muted); }
-  main { padding: 16px 0 40px; display: grid; gap: 18px; }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 20px;
+  header { padding: 28px 0 8px; }
+  .brand { text-align: center; margin-bottom: 26px; min-height: 44px; }
+  .brand img { height: 56px; width: auto; max-width: 100%; }
+  .brand .brand-text { font-weight: 600; font-size: 1.5rem; letter-spacing: .04em; color: var(--teal); text-transform: uppercase; }
+  h1 {
+    display: inline-block; margin: 0 0 10px;
+    background: var(--teal); color: #fff;
+    font-size: 1.5rem; line-height: 1.25; text-transform: uppercase; font-weight: 800;
+    padding: 8px 14px;
   }
-  .card h2 { margin: 0 0 6px; font-size: 1.3rem; line-height: 1.25; }
-  .desc { margin: 8px 0; white-space: pre-line; }
-  .meta { margin: 6px 0; color: var(--muted); font-size: .95rem; }
-  .sessions { margin: 10px 0; padding: 0; list-style: none; display: grid; gap: 4px; }
-  .sessions li { padding: 8px 12px; background: var(--bg); border-radius: 8px; font-size: .98rem; }
-  .sessions .note { display: block; color: var(--muted); font-size: .9rem; }
-  .count { color: var(--muted); font-size: .95rem; margin: 8px 0 14px; }
+  .lead { margin: 6px 0 0; color: var(--teal); font-weight: 500; }
+  main { padding: 18px 0 28px; display: grid; gap: 20px; }
+  .card { background: var(--card); border-radius: 14px; padding: 22px; }
+  .card h2 {
+    display: inline-block; margin: 0 0 12px;
+    background: var(--teal); color: #fff;
+    font-size: 1.2rem; line-height: 1.3; font-weight: 800; padding: 7px 12px;
+  }
+  .desc { margin: 8px 0 4px; white-space: pre-line; }
+  .info { margin: 16px 0 0; }
+  .tag {
+    display: inline-block; background: var(--teal); color: #fff;
+    font-weight: 700; font-size: .75rem; letter-spacing: .05em; text-transform: uppercase;
+    padding: 3px 9px; margin-bottom: 6px;
+  }
+  .val { white-space: pre-line; }
+  .sessions { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+  .sessions li { padding: 8px 12px; background: var(--cream); border-radius: 8px; font-size: .97rem; }
+  .sessions .note { display: block; color: var(--muted); font-size: .88rem; }
+  .more { margin: 16px 0 0; }
+  .more a { color: var(--teal); font-weight: 600; }
+  .count { color: var(--muted); font-size: .93rem; margin: 18px 0 14px; }
   button, .btn {
-    font: inherit; font-weight: 600;
-    background: var(--accent); color: #fff;
+    font: inherit; font-weight: 700;
+    background: var(--teal); color: #fff;
     border: 0; border-radius: 10px;
-    padding: 12px 20px; cursor: pointer; min-height: 46px;
+    padding: 12px 22px; cursor: pointer; min-height: 46px;
   }
-  button:hover { background: var(--accent-dark); }
+  button:hover { background: var(--teal2); }
   button:disabled { opacity: .6; cursor: default; }
-  button.secondary { background: transparent; color: var(--accent-dark); border: 1px solid var(--accent); }
+  button.secondary { background: transparent; color: var(--teal); border: 2px solid var(--teal); }
   button.secondary:hover { background: var(--ok-bg); }
   :focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
-  form { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
-  label { display: grid; gap: 4px; font-weight: 600; font-size: .95rem; }
+  form { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+  label { display: grid; gap: 4px; font-weight: 600; font-size: .93rem; }
   input[type=text], input[type=email] {
     font: inherit; font-weight: 400; width: 100%;
-    padding: 11px 12px; border: 1px solid #b9b3a6; border-radius: 8px; background: #fff;
+    padding: 11px 12px; border: 1px solid #8e9889; border-radius: 8px; background: #fff;
   }
-  .consent { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-weight: 400; font-size: .92rem; }
+  .consent { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-weight: 400; font-size: .9rem; }
   .consent input { width: 20px; height: 20px; margin-top: 3px; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .error { color: var(--error); font-weight: 600; margin: 0; }
-  .success { background: var(--ok-bg); border-radius: 10px; padding: 16px; margin-top: 14px; }
+  .success { background: var(--ok-bg); border-radius: 10px; padding: 16px; margin-top: 16px; }
   .success h3 { margin: 0 0 6px; }
   .linkbox { display: grid; gap: 8px; margin-top: 10px; }
-  .linkbox input { font: inherit; font-size: .85rem; width: 100%; padding: 10px; border: 1px solid #b9b3a6; border-radius: 8px; }
-  .muted, .empty { color: var(--muted); }
-  footer { padding: 0 0 36px; color: var(--muted); font-size: .88rem; }
-  footer a { color: inherit; }
-  @media (max-width: 480px) { h1 { font-size: 1.6rem; } .card { padding: 16px; } }
+  .linkbox input { font: inherit; font-size: .85rem; width: 100%; padding: 10px; border: 1px solid #8e9889; border-radius: 8px; background: #fff; }
+  .muted, .empty { color: var(--teal); }
+  footer { padding: 4px 0 36px; color: var(--teal); font-size: .88rem; text-align: center; }
+  footer a { color: inherit; font-weight: 600; }
+  .funders { background: var(--card); border-radius: 12px; padding: 14px; margin: 0 0 18px; display: none; gap: 22px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .funders.show { display: flex; }
+  .funders img { height: 46px; width: auto; max-width: 100%; }
+  .funding-note { margin: 0 0 14px; }
+  @media (max-width: 480px) { h1 { font-size: 1.25rem; } .card { padding: 16px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
+    <div class="brand" id="brand"><span class="brand-text" id="brandText">Fundacja BeFlow</span></div>
     <h1>Zapisy na warsztaty</h1>
     <p class="lead">Wybierz warsztat i zapisz się w kilka chwil.</p>
   </header>
@@ -87,9 +108,18 @@
 const CONFIG = {
   SUPABASE_URL: 'https://rsqwcvbixkdfcxfgwhym.supabase.co',
   SUPABASE_KEY: 'sb_publishable_VDS7OzDzHnpGkFCKgigIKQ_Dn0yC54p', // klucz publiczny - tak ma być
-  FOUNDATION_NAME: 'Fundacja',   // <- wpisz nazwę fundacji
-  PRIVACY_URL: '',               // <- link do polityki prywatności (opcjonalnie)
-  CONTACT_EMAIL: ''              // <- e-mail kontaktowy fundacji (opcjonalnie)
+  FOUNDATION_NAME: 'Fundacja BeFlow',
+  WEBSITE_URL: '',      // <- adres strony fundacji (opcjonalnie)
+  PRIVACY_URL: '',      // <- link do polityki prywatności (opcjonalnie)
+  CONTACT_EMAIL: '',    // <- e-mail kontaktowy fundacji (opcjonalnie)
+  FUNDING_NOTE: '',     // <- tekst o dofinansowaniu, jeśli wymaga go grant (opcjonalnie)
+  // Pliki z logotypami wrzuć do folderu "img" w repozytorium. Brakujące pliki są pomijane.
+  LOGO: 'img/logo.png',
+  FUNDER_LOGOS: [
+    { src: 'img/komitet.png', alt: 'Komitet do Spraw Pożytku Publicznego' },
+    { src: 'img/niw.png', alt: 'Narodowy Instytut Wolności – Centrum Rozwoju Społeczeństwa Obywatelskiego' },
+    { src: 'img/nowe-fio.png', alt: 'Rządowy Program Fundusz Inicjatyw Obywatelskich NOWE FIO na lata 2021–2030' }
+  ]
 };
 
 const TZ = 'Europe/Warsaw';
@@ -142,6 +172,10 @@ function sessionLabel(s) {
   return t;
 }
 
+function info(label, content) {
+  return h('div', { class: 'info' }, h('span', { class: 'tag' }, label), h('div', { class: 'val' }, content));
+}
+
 // ---------- Lista warsztatów ----------
 function renderWorkshops(list) {
   app.replaceChildren();
@@ -169,15 +203,21 @@ function workshopCard(w) {
     }
   });
 
+  const safeUrl = w.more_info_url && /^https?:\/\//i.test(w.more_info_url) ? w.more_info_url : null;
+
   return h('article', { class: 'card' },
     h('h2', {}, w.title),
     w.description && h('p', { class: 'desc' }, w.description),
-    w.location && h('p', { class: 'meta' }, `Miejsce: ${w.location}`),
-    h('ul', { class: 'sessions' },
+    info('Kiedy', h('ul', { class: 'sessions' },
       (w.sessions || []).map((s) =>
         h('li', {}, sessionLabel(s),
           s.location && h('span', { class: 'note' }, `Miejsce: ${s.location}`),
-          s.note && h('span', { class: 'note' }, s.note)))),
+          s.note && h('span', { class: 'note' }, s.note))))),
+    w.location && info('Gdzie', w.location),
+    w.facilitator && info('Kto prowadzi', w.facilitator),
+    w.audience && info('Dla kogo', w.audience),
+    w.cost && info('Udział', w.cost),
+    safeUrl && h('p', { class: 'more' }, h('a', { href: safeUrl, target: '_blank', rel: 'noopener' }, 'Więcej informacji')),
     h('p', { class: 'count' }, 'Zapisane osoby: ', countEl),
     btn,
     formBox);
@@ -248,14 +288,14 @@ function successBox(w, token) {
 // ---------- Rezygnacja ----------
 async function renderCancel(token) {
   app.replaceChildren(h('p', { class: 'muted' }, 'Ładowanie…'));
-  const back = h('p', {}, h('a', { href: location.pathname }, '← Wróć do listy warsztatów'));
+  const back = h('p', {}, h('a', { href: location.pathname, style: 'color:var(--teal);font-weight:600' }, '← Wróć do listy warsztatów'));
   try {
-    const info = await rpc('get_signup', { p_token: token });
-    if (!info) throw new Error('not_found');
-    if (info.cancelled) {
+    const infoRow = await rpc('get_signup', { p_token: token });
+    if (!infoRow) throw new Error('not_found');
+    if (infoRow.cancelled) {
       app.replaceChildren(h('article', { class: 'card' },
         h('h2', {}, 'Rezygnacja zapisana'),
-        h('p', {}, `Zapis na warsztat „${info.workshop_title}” został już anulowany.`), back));
+        h('p', {}, `Zapis na warsztat „${infoRow.workshop_title}” został już anulowany.`), back));
       return;
     }
     const err = h('p', { class: 'error', role: 'alert' });
@@ -266,31 +306,55 @@ async function renderCancel(token) {
         await rpc('cancel_signup', { p_token: token });
         app.replaceChildren(h('article', { class: 'card' },
           h('h2', {}, 'Rezygnacja przyjęta'),
-          h('p', {}, `Anulowaliśmy Twój zapis na warsztat „${info.workshop_title}”. Dziękujemy, że dałeś/aś znać.`), back));
+          h('p', {}, `Anulowaliśmy Twój zapis na warsztat „${infoRow.workshop_title}”. Dziękujemy, że dałeś/aś znać.`), back));
       } catch (ex) { err.textContent = errText(ex); yes.disabled = false; }
     });
     app.replaceChildren(h('article', { class: 'card' },
       h('h2', {}, 'Rezygnacja z warsztatu'),
-      h('p', {}, `Czy na pewno chcesz zrezygnować z udziału w warsztacie „${info.workshop_title}”?`),
-      err, yes, ' ', h('a', { href: location.pathname, style: 'margin-left:12px' }, 'Nie, zostaję')));
+      h('p', {}, `Czy na pewno chcesz zrezygnować z udziału w warsztacie „${infoRow.workshop_title}”?`),
+      err, yes, ' ', h('a', { href: location.pathname, style: 'margin-left:12px;color:var(--teal);font-weight:600' }, 'Nie, zostaję')));
   } catch (ex) {
     app.replaceChildren(h('article', { class: 'card' }, h('h2', {}, 'Nie znaleziono zapisu'), h('p', {}, errText(ex)), back));
   }
 }
 
+// ---------- Logotypy i stopka ----------
+function setupBranding() {
+  // Logo fundacji: jeśli plik istnieje, zastępuje tekst
+  const logo = h('img', { src: CONFIG.LOGO, alt: CONFIG.FOUNDATION_NAME });
+  logo.addEventListener('load', () => {
+    document.getElementById('brandText').hidden = true;
+    document.getElementById('brand').append(logo);
+  });
+
+  const f = document.getElementById('footer');
+  if (CONFIG.FUNDER_LOGOS.length) {
+    const box = h('div', { class: 'funders' });
+    CONFIG.FUNDER_LOGOS.forEach((l) => {
+      const img = h('img', { src: l.src, alt: l.alt });
+      img.addEventListener('load', () => box.classList.add('show'));
+      img.addEventListener('error', () => img.remove());
+      box.append(img);
+    });
+    f.append(box);
+  }
+  if (CONFIG.FUNDING_NOTE) f.append(h('p', { class: 'funding-note' }, CONFIG.FUNDING_NOTE));
+  f.append(CONFIG.WEBSITE_URL
+    ? h('a', { href: CONFIG.WEBSITE_URL, target: '_blank', rel: 'noopener' }, CONFIG.FOUNDATION_NAME)
+    : CONFIG.FOUNDATION_NAME);
+  if (CONFIG.CONTACT_EMAIL) f.append(' · Kontakt: ', h('a', { href: `mailto:${CONFIG.CONTACT_EMAIL}` }, CONFIG.CONTACT_EMAIL));
+}
+
 // ---------- Start ----------
 (async function init() {
-  const f = document.getElementById('footer');
-  f.append(CONFIG.FOUNDATION_NAME);
-  if (CONFIG.CONTACT_EMAIL) f.append(' · Kontakt: ', h('a', { href: `mailto:${CONFIG.CONTACT_EMAIL}` }, CONFIG.CONTACT_EMAIL));
-
+  setupBranding();
   const token = new URLSearchParams(location.search).get('anuluj');
   if (token && /^[0-9a-f-]{36}$/i.test(token)) { renderCancel(token); return; }
 
   try {
     renderWorkshops(await rpc('get_workshops'));
   } catch (e) {
-    app.replaceChildren(h('p', { class: 'error' }, 'Nie udało się wczytać warsztatów. Odśwież stronę lub spróbuj później.'));
+    app.replaceChildren(h('p', { class: 'error', style: 'background:var(--card);padding:12px;border-radius:10px' }, 'Nie udało się wczytać warsztatów. Odśwież stronę lub spróbuj później.'));
   }
 })();
 </script>
