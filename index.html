@@ -43,6 +43,14 @@
     font-size: 1.2rem; line-height: 1.3; font-weight: 800; padding: 7px 12px;
   }
   .desc { margin: 8px 0 4px; white-space: pre-line; }
+  /* Warsztaty obok siebie - przewijanie w poziomie */
+  .track { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; align-items: flex-start;
+    position: relative; padding: 2px 2px 14px; scrollbar-width: thin; scrollbar-color: var(--teal) #e9ece6; }
+  .track > .card { flex: 0 0 88%; min-width: 0; scroll-snap-align: start; }
+  .track.single > .card { flex-basis: 100%; }
+  .pager-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; color: var(--teal); font-weight: 600; font-size: .95rem; }
+  button.pager { width: 44px; padding: 0; justify-content: center; background: var(--teal); color: #fff; font-size: 1.5rem; line-height: 1; }
+  button.pager:hover { background: var(--teal2); }
   .info { margin: 16px 0 0; }
   .tag {
     display: inline-block; background: var(--teal); color: #fff;
@@ -197,7 +205,43 @@ function renderWorkshops(list) {
     app.append(h('p', { class: 'empty' }, 'Obecnie nie ma otwartych zapisów. Zajrzyj tu wkrótce.'));
     return;
   }
-  list.forEach((w) => app.append(workshopCard(w)));
+  const track = h('div', { class: 'track', tabindex: '0', role: 'region', 'aria-label': 'Lista warsztatów – przewijaj w poziomie' });
+  list.forEach((w) => track.append(workshopCard(w)));
+  if (list.length === 1) { track.classList.add('single'); app.append(track); return; }
+
+  // Strzałki i licznik (dla komputerów, gdzie nie ma przeciągania palcem)
+  const n = list.length;
+  const counter = h('span', {}, `1 / ${n}`);
+  const prev = h('button', { type: 'button', class: 'pager', 'aria-label': 'Poprzedni warsztat' }, '‹');
+  const next = h('button', { type: 'button', class: 'pager', 'aria-label': 'Następny warsztat' }, '›');
+  const currentIndex = () => {
+    let best = 0; let bestDist = Infinity;
+    [...track.children].forEach((c, i) => {
+      const d = Math.abs(c.offsetLeft - track.scrollLeft);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    return best;
+  };
+  const refresh = () => {
+    const i = currentIndex();
+    counter.textContent = `${i + 1} / ${n}`;
+    prev.disabled = i === 0;
+    next.disabled = i === n - 1;
+  };
+  const go = (dir) => {
+    const i = Math.min(n - 1, Math.max(0, currentIndex() + dir));
+    track.scrollTo({ left: track.children[i].offsetLeft, behavior: 'smooth' });
+  };
+  prev.addEventListener('click', () => go(-1));
+  next.addEventListener('click', () => go(1));
+  let ticking = false;
+  track.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { refresh(); ticking = false; });
+  });
+  refresh();
+  app.append(h('div', { class: 'pager-row' }, counter, prev, next), track);
 }
 
 function workshopCard(w) {
