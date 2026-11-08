@@ -116,6 +116,7 @@ const CONFIG = {
   PRIVACY_URL: '',      // <- link do polityki prywatności (opcjonalnie)
   CONTACT_EMAIL: '',    // <- e-mail kontaktowy fundacji (opcjonalnie)
   FUNDING_NOTE: '',     // <- tekst o dofinansowaniu, jeśli wymaga go grant (opcjonalnie)
+  SHOW_CANCEL_LINK: true, // <- zmień na false, gdy działa wysyłka e-maili z potwierdzeniem (przycisk rezygnacji będzie w mailu)
   // Pliki z logotypami wrzuć do folderu "img" w repozytorium. Brakujące pliki są pomijane.
   LOGO: 'img/logo.png',
   FUNDER_LOGOS: [
@@ -263,7 +264,7 @@ function signupForm(w, formBox, countEl, btn) {
       const res = await rpc('sign_up', { p_workshop_id: w.id, p_full_name: name, p_email: email, p_consent: true });
       countEl.textContent = String(Number(countEl.textContent) + 1);
       btn.remove();
-      formBox.replaceChildren(successBox(w, res.cancel_token));
+      formBox.replaceChildren(successBox(w, res.cancel_token, email));
     } catch (ex) {
       err.textContent = errText(ex);
       submit.disabled = false;
@@ -273,7 +274,13 @@ function signupForm(w, formBox, countEl, btn) {
   return form;
 }
 
-function successBox(w, token) {
+function successBox(w, token, email) {
+  if (!CONFIG.SHOW_CANCEL_LINK) {
+    return h('div', { class: 'success', role: 'status' },
+      h('h3', {}, 'Dziękujemy, jesteś zapisany/a!'),
+      h('p', {}, `Zapisaliśmy Cię na warsztat „${w.title}”.`),
+      h('p', {}, `Wysłaliśmy potwierdzenie na adres ${email}. W wiadomości znajdziesz przycisk, którym możesz zrezygnować z udziału. Jeśli nie widzisz maila, sprawdź folder spam.`));
+  }
   const link = `${location.origin}${location.pathname}?anuluj=${token}`;
   const input = h('input', { type: 'text', readonly: true, value: link, 'aria-label': 'Twój osobisty link do rezygnacji' });
   const copy = h('button', { type: 'button', class: 'secondary' }, 'Skopiuj link');
