@@ -10,7 +10,7 @@
     --teal: #03363f;
     --teal2: #0a4a55;
     --cream: #e6e4d6;
-    --card: #f6f5ee;
+    --card: #647a60;
     --ink: #12302f;
     --muted: #455653;
     --line: #cfd3c4;
@@ -20,7 +20,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--sage);
+    background: #ffffff;
     color: var(--ink);
     font: 17px/1.55 Montserrat, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
@@ -37,7 +37,7 @@
   }
   .lead { margin: 6px 0 0; color: var(--teal); font-weight: 500; }
   main { padding: 18px 0 28px; display: grid; gap: 20px; }
-  .card { background: var(--card); border-radius: 14px; padding: 22px; }
+  .card { background: var(--card); color: #fff; border-radius: 14px; padding: 22px; }
   .card h2 {
     display: inline-block; margin: 0 0 12px;
     background: var(--teal); color: #fff;
@@ -52,23 +52,24 @@
   }
   .val { white-space: pre-line; }
   .sessions { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
-  .sessions li { padding: 8px 12px; background: var(--cream); border-radius: 8px; font-size: .97rem; }
+  .sessions li { padding: 8px 12px; background: var(--cream); color: var(--ink); border-radius: 8px; font-size: .97rem; }
   .sessions .note { display: block; color: var(--muted); font-size: .88rem; }
   .more { margin: 16px 0 0; }
-  .more a { color: var(--teal); font-weight: 600; }
-  .count { color: var(--muted); font-size: .93rem; margin: 18px 0 14px; }
+  .more a { text-decoration: underline; }
+  .card a { color: #fff; font-weight: 600; }
+  .count { color: #fff; font-size: .93rem; margin: 18px 0 14px; }
   button, .btn {
     font: inherit; font-weight: 700;
-    background: var(--teal); color: #fff;
+    background: var(--cream); color: var(--teal);
     border: 0; border-radius: 10px;
     padding: 12px 22px; cursor: pointer; min-height: 46px;
   }
-  button:hover { background: var(--teal2); }
+  button:hover { background: #ffffff; }
   button:disabled { opacity: .6; cursor: default; }
-  button.secondary { background: transparent; color: var(--teal); border: 2px solid var(--teal); }
-  button.secondary:hover { background: var(--ok-bg); }
+  button.secondary { background: transparent; color: #fff; border: 2px solid #fff; }
+  button.secondary:hover { background: rgba(255,255,255,.18); }
   :focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
-  form { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+  form { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.45); display: grid; gap: 14px; }
   label { display: grid; gap: 4px; font-weight: 600; font-size: .93rem; }
   input[type=text], input[type=email] {
     font: inherit; font-weight: 400; width: 100%;
@@ -78,14 +79,16 @@
   .consent input { width: 20px; height: 20px; margin-top: 3px; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .error { color: var(--error); font-weight: 600; margin: 0; }
-  .success { background: var(--ok-bg); border-radius: 10px; padding: 16px; margin-top: 16px; }
+  .card .error { background: #fff; padding: 8px 12px; border-radius: 8px; }
+  .error:empty { display: none; }
+  .success { background: var(--ok-bg); color: var(--ink); border-radius: 10px; padding: 16px; margin-top: 16px; }
   .success h3 { margin: 0 0 6px; }
   .linkbox { display: grid; gap: 8px; margin-top: 10px; }
   .linkbox input { font: inherit; font-size: .85rem; width: 100%; padding: 10px; border: 1px solid #8e9889; border-radius: 8px; background: #fff; }
   .muted, .empty { color: var(--teal); }
   footer { padding: 4px 0 36px; color: var(--teal); font-size: .88rem; text-align: center; }
   footer a { color: inherit; font-weight: 600; }
-  .funders { background: var(--card); border-radius: 12px; padding: 14px; margin: 0 0 18px; display: none; gap: 22px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .funders { background: transparent; border-radius: 12px; padding: 14px; margin: 0 0 18px; display: none; gap: 22px; justify-content: center; align-items: center; flex-wrap: wrap; }
   .funders.show { display: flex; }
   .funders img { height: 46px; width: auto; max-width: 100%; }
   .funding-note { margin: 0 0 14px; }
@@ -288,7 +291,7 @@ function successBox(w, token) {
 // ---------- Rezygnacja ----------
 async function renderCancel(token) {
   app.replaceChildren(h('p', { class: 'muted' }, 'Ładowanie…'));
-  const back = h('p', {}, h('a', { href: location.pathname, style: 'color:var(--teal);font-weight:600' }, '← Wróć do listy warsztatów'));
+  const back = h('p', {}, h('a', { href: location.pathname }, '← Wróć do listy warsztatów'));
   try {
     const infoRow = await rpc('get_signup', { p_token: token });
     if (!infoRow) throw new Error('not_found');
@@ -312,7 +315,7 @@ async function renderCancel(token) {
     app.replaceChildren(h('article', { class: 'card' },
       h('h2', {}, 'Rezygnacja z warsztatu'),
       h('p', {}, `Czy na pewno chcesz zrezygnować z udziału w warsztacie „${infoRow.workshop_title}”?`),
-      err, yes, ' ', h('a', { href: location.pathname, style: 'margin-left:12px;color:var(--teal);font-weight:600' }, 'Nie, zostaję')));
+      err, yes, ' ', h('a', { href: location.pathname, style: 'margin-left:12px' }, 'Nie, zostaję')));
   } catch (ex) {
     app.replaceChildren(h('article', { class: 'card' }, h('h2', {}, 'Nie znaleziono zapisu'), h('p', {}, errText(ex)), back));
   }
@@ -354,7 +357,7 @@ function setupBranding() {
   try {
     renderWorkshops(await rpc('get_workshops'));
   } catch (e) {
-    app.replaceChildren(h('p', { class: 'error', style: 'background:var(--card);padding:12px;border-radius:10px' }, 'Nie udało się wczytać warsztatów. Odśwież stronę lub spróbuj później.'));
+    app.replaceChildren(h('p', { class: 'error' }, 'Nie udało się wczytać warsztatów. Odśwież stronę lub spróbuj później.'));
   }
 })();
 </script>
