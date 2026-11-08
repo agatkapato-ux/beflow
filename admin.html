@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel fundacji – warsztaty</title>
+<style>
+  :root {
+    --bg: #f6f3ee; --card: #fff; --ink: #24302d; --muted: #66726e;
+    --accent: #2f7d6d; --accent-dark: #25645a; --line: #e2ddd3;
+    --error: #b3261e; --ok-bg: #e8f3ef; --warn-bg: #fff4d6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px 48px; }
+  .topbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 22px 0 10px; }
+  h1 { margin: 0; font-size: 1.6rem; }
+  h2 { margin: 0 0 6px; font-size: 1.2rem; }
+  .muted { color: var(--muted); font-size: .92rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-top: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .badge { display: inline-block; font-size: .78rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--line); color: var(--muted); margin-left: 6px; vertical-align: middle; }
+  .badge.hidden { background: #f3d9d6; color: var(--error); }
+  .badge.past { background: #e3e3e3; }
+  button, .btn { font: inherit; font-weight: 600; background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 9px 16px; cursor: pointer; min-height: 42px; text-decoration: none; display: inline-flex; align-items: center; }
+  button:hover, .btn:hover { background: var(--accent-dark); }
+  button:disabled { opacity: .6; cursor: default; }
+  button.secondary, .btn.secondary { background: transparent; color: var(--accent-dark); border: 1px solid var(--accent); }
+  button.secondary:hover, .btn.secondary:hover { background: var(--ok-bg); }
+  button.danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
+  button.danger:hover { background: #fbe9e7; }
+  button.small { min-height: 34px; padding: 4px 12px; font-size: .9rem; }
+  :focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+  label { display: grid; gap: 4px; font-weight: 600; font-size: .92rem; }
+  input[type=text], input[type=email], input[type=password], input[type=datetime-local], input[type=number], textarea {
+    font: inherit; font-weight: 400; width: 100%; padding: 9px 11px; border: 1px solid #b9b3a6; border-radius: 8px; background: #fff; }
+  textarea { min-height: 110px; resize: vertical; }
+  form.grid { display: grid; gap: 14px; }
+  .check { display: flex; gap: 10px; align-items: center; font-weight: 400; }
+  .check input { width: 20px; height: 20px; }
+  .error { color: var(--error); font-weight: 600; margin: 0; }
+  .notice { background: var(--warn-bg); border-radius: 10px; padding: 10px 14px; font-size: .92rem; }
+  .ok { background: var(--ok-bg); border-radius: 10px; padding: 10px 14px; }
+  .sessions { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 4px; }
+  .sessions li { background: var(--bg); border-radius: 8px; padding: 6px 12px; font-size: .95rem; }
+  .srow { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; background: #fbfaf7; }
+  .srow .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .srow .two { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; font-size: .93rem; margin-top: 8px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; word-break: break-word; }
+  th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+  .login { max-width: 400px; margin: 60px auto 0; }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+
+<script>
+// ---------- Ustawienia ----------
+const CONFIG = {
+  SUPABASE_URL: 'https://rsqwcvbixkdfcxfgwhym.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_VDS7OzDzHnpGkFCKgigIKQ_Dn0yC54p'
+};
+const TZ = 'Europe/Warsaw';
+const root = document.getElementById('root');
+const state = { workshops: [], openParticipants: new Set(), message: '' };
+
+// ---------- Pomocnicze ----------
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, '');
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+// Czas: pole formularza (czas w Warszawie) <-> ISO (UTC)
+function tzOffsetMs(utcMs) {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .formatToParts(new Date(utcMs));
+  const o = {}; parts.forEach((p) => { o[p.type] = p.value; });
+  return Date.UTC(o.year, o.month - 1, o.day, o.hour, o.minute, o.second) - Math.floor(utcMs / 1000) * 1000;
+}
+function warsawToISO(local) {
+  const [d, t] = local.split('T');
+  const [y, mo, da] = d.split('-').map(Number);
+  const [hh, mm] = t.split(':').map(Number);
+  const wall = Date.UTC(y, mo - 1, da, hh, mm);
+  let utc = wall;
+  for (let i = 0; i < 2; i++) utc = wall - tzOffsetMs(utc);
+  return new Date(utc).toISOString();
+}
+function isoToWarsaw(iso) {
+  if (!iso) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(iso));
+  const o = {}; parts.forEach((p) => { o[p.type] = p.value; });
+  return `${o.year}-${o.month}-${o.day}T${o.hour}:${o.minute}`;
+}
+function addDaysLocal(local, days) {
+  if (!local) return '';
+  const [d, t] = local.split('T');
+  const [y, mo, da] = d.split('-').map(Number);
+  const [hh, mm] = t.split(':').map(Number);
+  const x = new Date(Date.UTC(y, mo - 1, da + days, hh, mm));
+  const p = (n) => String(n).padStart(2, '0');
+  return `${x.getUTCFullYear()}-${p(x.getUTCMonth() + 1)}-${p(x.getUTCDate())}T${p(x.getUTCHours())}:${p(x.getUTCMinutes())}`;
+}
+const fmtDay = new Intl.DateTimeFormat('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ });
+const fmtTime = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+const fmtShort = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ });
+function sessionLabel(s) {
+  const a = new Date(s.starts_at);
+  return `${fmtDay.format(a)}, ${fmtTime.format(a)}` + (s.ends_at ? `–${fmtTime.format(new Date(s.ends_at))}` : '');
+}
+
+// ---------- Logowanie i API ----------
+let session = null;
+try { session = JSON.parse(localStorage.getItem('bf_admin')); } catch (e) { session = null; }
+
+function saveSession(d, prevEmail) {
+  session = {
+    access_token: d.access_token,
+    refresh_token: d.refresh_token,
+    expires_at: Date.now() + Math.max(60, (d.expires_in || 3600) - 60) * 1000,
+    email: (d.user && d.user.email) || prevEmail || ''
+  };
+  try { localStorage.setItem('bf_admin', JSON.stringify(session)); } catch (e) { /* ignoruj */ }
+}
+function clearSession() {
+  session = null;
+  try { localStorage.removeItem('bf_admin'); } catch (e) { /* ignoruj */ }
+}
+async function authCall(grant, body) {
+  const res = await fetch(`${CONFIG.SUPABASE_URL}/auth/v1/token?grant_type=${grant}`, {
+    method: 'POST', headers: { apikey: CONFIG.SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(d.error_code || d.error || 'auth');
+  return d;
+}
+async function ensureSession() {
+  if (!session) throw new Error('no_session');
+  if (Date.now() > session.expires_at) {
+    try { saveSession(await authCall('refresh_token', { refresh_token: session.refresh_token }), session.email); }
+    catch (e) { clearSession(); throw new Error('no_session'); }
+  }
+}
+async function api(path, opts = {}) {
+  await ensureSession();
+  const headers = { apikey: CONFIG.SUPABASE_KEY, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' };
+  if (opts.prefer) headers.Prefer = opts.prefer;
+  const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${path}`, {
+    method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (e) { /* brak JSON */ }
+  if (!res.ok) throw new Error((data && data.message) || `HTTP ${res.status}`);
+  return data;
+}
+const saveErr = (e) => (e.message === 'no_session' ? 'Sesja wygasła. Zaloguj się ponownie.' : `Nie udało się zapisać: ${e.message}`);
+
+// ---------- Widok: logowanie ----------
+function renderLogin(msg) {
+  const err = h('p', { class: 'error', role: 'alert' }, msg || '');
+  const btn = h('button', { type: 'submit' }, 'Zaloguj się');
+  const form = h('form', { class: 'grid' },
+    h('label', {}, 'E-mail', h('input', { type: 'email', name: 'email', autocomplete: 'username', required: true })),
+    h('label', {}, 'Hasło', h('input', { type: 'password', name: 'password', autocomplete: 'current-password', required: true })),
+    err, btn);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); err.textContent = ''; btn.disabled = true;
+    try {
+      saveSession(await authCall('password', { email: form.email.value.trim(), password: form.password.value }));
+      await start();
+    } catch (ex) {
+      err.textContent = 'Nieprawidłowy e-mail lub hasło.'; btn.disabled = false;
+    }
+  });
+  root.replaceChildren(h('div', { class: 'login card' }, h('h1', {}, 'Panel fundacji'),
+    h('p', { class: 'muted' }, 'Zaloguj się, aby zarządzać warsztatami.'), form));
+}
+
+// ---------- Dane ----------
+async function load() {
+  const rows = await api('workshops?select=*,sessions(*),signups(id,full_name,email,created_at,cancelled_at)&order=created_at.desc');
+  rows.forEach((w) => w.sessions.sort((a, b) => a.starts_at.localeCompare(b.starts_at)));
+  state.workshops = rows;
+}
+async function start() {
+  try {
+    const staff = await api('staff?select=user_id');
+    if (!staff.length) {
+      root.replaceChildren(h('div', { class: 'login card' }, h('h2', {}, 'Brak uprawnień'),
+        h('p', {}, 'To konto nie ma dostępu do panelu. Poproś osobę zarządzającą systemem o dodanie Cię do zespołu.'),
+        h('button', { class: 'secondary', onclick: () => { clearSession(); renderLogin(); } }, 'Wyloguj')));
+      return;
+    }
+    await load();
+    renderList();
+  } catch (e) {
+    if (e.message === 'no_session') { renderLogin('Zaloguj się ponownie.'); return; }
+    root.replaceChildren(h('div', { class: 'card' }, h('p', { class: 'error' }, `Błąd wczytywania: ${e.message}`),
+      h('button', { onclick: start }, 'Spróbuj ponownie')));
+  }
+}
+
+// ---------- Widok: lista warsztatów ----------
+function topbar() {
+  return h('div', { class: 'topbar' },
+    h('h1', {}, 'Warsztaty'),
+    h('div', { class: 'row' },
+      h('span', { class: 'muted' }, session && session.email),
+      h('a', { class: 'btn secondary small', href: 'index.html', target: '_blank', rel: 'noopener' }, 'Strona zapisów'),
+      h('button', { class: 'secondary small', onclick: () => { clearSession(); renderLogin(); } }, 'Wyloguj')));
+}
+
+function renderList() {
+  const now = Date.now();
+  const list = h('div');
+  if (!state.workshops.length) list.append(h('p', { class: 'muted' }, 'Nie ma jeszcze żadnych warsztatów. Kliknij „Nowy warsztat”.'));
+  state.workshops.forEach((w) => list.append(workshopCard(w, now)));
+  root.replaceChildren(topbar(),
+    h('div', { class: 'row' }, h('button', { onclick: () => renderEditor(null) }, '+ Nowy warsztat')),
+    state.message && h('p', { class: 'ok', role: 'status', style: 'margin-top:12px' }, state.message),
+    list);
+  state.message = '';
+}
+
+function workshopCard(w, now) {
+  const active = w.signups.filter((s) => !s.cancelled_at).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const upcoming = w.sessions.some((s) => new Date(s.starts_at).getTime() > now);
+  const open = state.openParticipants.has(w.id);
+  const err = h('p', { class: 'error', role: 'alert' });
+
+  const toggle = h('button', { class: 'secondary small', onclick: () => {
+    open ? state.openParticipants.delete(w.id) : state.openParticipants.add(w.id); renderList(); } },
+    `${open ? 'Ukryj' : 'Pokaż'} uczestników (${active.length})`);
+
+  const publish = h('button', { class: 'secondary small', onclick: async () => {
+    try {
+      await api(`workshops?id=eq.${w.id}`, { method: 'PATCH', body: { is_published: !w.is_published } });
+      state.message = w.is_published ? 'Warsztat ukryty na stronie zapisów.' : 'Warsztat jest widoczny na stronie zapisów.';
+      await load(); renderList();
+    } catch (e) { err.textContent = saveErr(e); } } }, w.is_published ? 'Ukryj na stronie' : 'Pokaż na stronie');
+
+  const del = w.signups.length === 0 && h('button', { class: 'danger small', onclick: async () => {
+    if (!confirm(`Usunąć warsztat „${w.title}”? Tej operacji nie można cofnąć.`)) return;
+    try { await api(`workshops?id=eq.${w.id}`, { method: 'DELETE' }); state.message = 'Warsztat usunięty.'; await load(); renderList(); }
+    catch (e) { err.textContent = saveErr(e); } } }, 'Usuń');
+
+  return h('article', { class: 'card' },
+    h('h2', {}, w.title,
+      !w.is_published && h('span', { class: 'badge hidden' }, 'ukryty'),
+      !upcoming && h('span', { class: 'badge past' }, 'zakończony')),
+    w.location && h('p', { class: 'muted', style: 'margin:0' }, `Miejsce: ${w.location}`),
+    h('ul', { class: 'sessions' }, w.sessions.map((s) => h('li', {}, sessionLabel(s),
+      s.location ? ` · ${s.location}` : '', s.note ? ` · ${s.note}` : ''))),
+    h('div', { class: 'row' },
+      h('button', { class: 'small', onclick: () => renderEditor(w) }, 'Edytuj'), toggle, publish, del),
+    err,
+    open && participantsPanel(w, active));
+}
+
+function participantsPanel(w, active) {
+  const box = h('div', { style: 'margin-top:12px' });
+  if (!active.length) { box.append(h('p', { class: 'muted' }, 'Nikt się jeszcze nie zapisał.')); return box; }
+  const copy = h('button', { class: 'secondary small', onclick: async () => {
+    try { await navigator.clipboard.writeText(active.map((s) => s.email).join(', ')); copy.textContent = 'Skopiowano!'; }
+    catch (e) { copy.textContent = 'Nie udało się skopiować'; } } }, 'Kopiuj e-maile');
+  const csv = h('button', { class: 'secondary small', onclick: () => downloadCsv(w, active) }, 'Pobierz CSV');
+  const err = h('p', { class: 'error', role: 'alert' });
+  const table = h('table', {},
+    h('thead', {}, h('tr', {}, h('th', {}, 'Imię i nazwisko'), h('th', {}, 'E-mail'), h('th', {}, 'Zapisano'), h('th', {}, ''))),
+    h('tbody', {}, active.map((s) => h('tr', {},
+      h('td', {}, s.full_name), h('td', {}, s.email), h('td', {}, fmtShort.format(new Date(s.created_at))),
+      h('td', {}, h('button', { class: 'danger small', onclick: async () => {
+        if (!confirm(`Usunąć z listy: ${s.full_name}?`)) return;
+        try { await api(`signups?id=eq.${s.id}`, { method: 'PATCH', body: { cancelled_at: new Date().toISOString() } });
+          await load(); renderList(); } catch (e) { err.textContent = saveErr(e); } } }, 'Usuń'))))));
+  box.append(h('div', { class: 'row' }, copy, csv), err, table);
+  return box;
+}
+
+function downloadCsv(w, active) {
+  const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [['Imię i nazwisko', 'E-mail', 'Zapisano'].map(q).join(';')]
+    .concat(active.map((s) => [s.full_name, s.email, s.created_at].map(q).join(';')));
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = h('a', { href: URL.createObjectURL(blob), download: `uczestnicy-${w.title.replace(/[^\p{L}\p{N}]+/gu, '-').slice(0, 40)}.csv` });
+  document.body.append(a); a.click(); a.remove();
+}
+
+// ---------- Widok: edytor warsztatu ----------
+function renderEditor(w) {
+  const isNew = !w;
+  const rows = isNew
+    ? [{ start: '', end: '', location: '', note: '' }]
+    : w.sessions.map((s) => ({ id: s.id, origStart: s.starts_at, start: isoToWarsaw(s.starts_at), end: isoToWarsaw(s.ends_at),
+        location: s.location || '', note: s.note || '' }));
+
+  const err = h('p', { class: 'error', role: 'alert' });
+  const rowsBox = h('div', { style: 'display:grid;gap:10px' });
+  const repeatN = h('input', { type: 'number', min: '1', max: '30', value: '3', style: 'width:80px' });
+
+  function drawRows() {
+    rowsBox.replaceChildren(...rows.map((r, i) => {
+      const inp = (key, type, ph) => h('input', { type, value: r[key], placeholder: ph || null,
+        oninput: (e) => { r[key] = e.target.value; } });
+      return h('div', { class: 'srow' },
+        h('div', { class: 'two' },
+          h('label', {}, 'Początek', inp('start', 'datetime-local')),
+          h('label', {}, 'Koniec (opcjonalnie)', inp('end', 'datetime-local'))),
+        h('div', { class: 'two' },
+          h('label', {}, 'Inne miejsce (opcjonalnie)', inp('location', 'text', 'np. sala 2 / link do spotkania')),
+          h('label', {}, 'Uwagi (opcjonalnie)', inp('note', 'text', 'np. zmiana terminu'))),
+        rows.length > 1 && h('div', {}, h('button', { type: 'button', class: 'danger small', onclick: () => { rows.splice(i, 1); drawRows(); } }, 'Usuń ten termin')));
+    }));
+  }
+  drawRows();
+
+  const addOne = h('button', { type: 'button', class: 'secondary small', onclick: () => {
+    rows.push({ start: '', end: '', location: '', note: '' }); drawRows(); } }, '+ Dodaj termin');
+  const addWeekly = h('button', { type: 'button', class: 'secondary small', onclick: () => {
+    const last = rows[rows.length - 1];
+    if (!last || !last.start) { err.textContent = 'Najpierw wpisz datę i godzinę pierwszego terminu.'; return; }
+    err.textContent = '';
+    const n = Math.min(30, Math.max(1, parseInt(repeatN.value, 10) || 1));
+    for (let i = 1; i <= n; i++) rows.push({ start: addDaysLocal(last.start, 7 * i), end: addDaysLocal(last.end, 7 * i), location: last.location, note: '' });
+    drawRows(); } }, 'Dodaj kolejne co tydzień');
+
+  const form = h('form', { class: 'grid', novalidate: true },
+    h('label', {}, 'Tytuł warsztatu', h('input', { type: 'text', name: 'title', required: true, maxlength: '200', value: w ? w.title : '' })),
+    h('label', {}, 'Opis (widoczny na stronie zapisów)', h('textarea', { name: 'description', maxlength: '4000' }, w && w.description ? w.description : '')),
+    h('label', {}, 'Miejsce', h('input', { type: 'text', name: 'location', maxlength: '300', value: w && w.location ? w.location : '', placeholder: 'np. Warszawa, ul. Przykładowa 1 lub Online' })),
+    h('div', {}, h('strong', {}, 'Terminy'), h('p', { class: 'muted', style: 'margin:2px 0 8px' }, 'Warsztat jednorazowy ma jeden termin, cykl ma kilka. Godziny w czasie polskim.'), rowsBox,
+      h('div', { class: 'row', style: 'margin-top:10px' }, addOne, h('span', { class: 'muted' }, 'lub'), addWeekly, h('span', { class: 'muted' }, 'razy:'), repeatN)),
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', name: 'published', checked: w ? w.is_published : true }), 'Widoczny na stronie zapisów'),
+    !isNew && h('p', { class: 'notice' }, 'Uwaga: zmiana terminu lub opisu nie wysyła jeszcze wiadomości do uczestników. Wysyłkę e-maili dodamy w kolejnym kroku.'),
+    err,
+    h('div', { class: 'row' }, h('button', { type: 'submit' }, isNew ? 'Utwórz warsztat' : 'Zapisz zmiany'),
+      h('button', { type: 'button', class: 'secondary', onclick: renderList }, 'Anuluj')));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); err.textContent = '';
+    const title = form.title.value.trim();
+    if (!title) { err.textContent = 'Wpisz tytuł warsztatu.'; form.title.focus(); return; }
+    for (const r of rows) {
+      if (!r.start) { err.textContent = 'Każdy termin musi mieć datę i godzinę początku.'; return; }
+      if (r.end && warsawToISO(r.end) <= warsawToISO(r.start)) { err.textContent = 'Koniec musi być po początku.'; return; }
+    }
+    const submitBtn = form.querySelector('button[type=submit]');
+    submitBtn.disabled = true;
+    try {
+      const payload = { title, description: form.description.value.trim() || null,
+        location: form.location.value.trim() || null, is_published: form.published.checked };
+      let id;
+      if (isNew) {
+        const created = await api('workshops', { method: 'POST', body: payload, prefer: 'return=representation' });
+        id = created[0].id;
+      } else {
+        id = w.id;
+        await api(`workshops?id=eq.${id}`, { method: 'PATCH', body: payload });
+        const keep = rows.filter((r) => r.id).map((r) => r.id);
+        const removed = w.sessions.filter((s) => !keep.includes(s.id)).map((s) => s.id);
+        if (removed.length) await api(`sessions?id=in.(${removed.join(',')})`, { method: 'DELETE' });
+        for (const r of rows.filter((x) => x.id)) {
+          const startISO = warsawToISO(r.start);
+          const body = { starts_at: startISO, ends_at: r.end ? warsawToISO(r.end) : null,
+            location: r.location.trim() || null, note: r.note.trim() || null };
+          if (new Date(startISO).getTime() !== new Date(r.origStart).getTime()) body.reminder_sent_at = null;
+          await api(`sessions?id=eq.${r.id}`, { method: 'PATCH', body });
+        }
+      }
+      const fresh = rows.filter((r) => !r.id).map((r) => ({ workshop_id: id, starts_at: warsawToISO(r.start),
+        ends_at: r.end ? warsawToISO(r.end) : null, location: r.location.trim() || null, note: r.note.trim() || null }));
+      if (fresh.length) await api('sessions', { method: 'POST', body: fresh });
+      state.message = isNew ? 'Warsztat utworzony.' : 'Zmiany zapisane.';
+      await load(); renderList();
+    } catch (ex) { err.textContent = saveErr(ex); submitBtn.disabled = false; }
+  });
+
+  root.replaceChildren(topbar(), h('div', { class: 'card' }, h('h2', {}, isNew ? 'Nowy warsztat' : 'Edycja warsztatu'), form));
+  form.title.focus();
+}
+
+// ---------- Start ----------
+if (session) start(); else renderLogin();
+</script>
+</body>
+</html>
