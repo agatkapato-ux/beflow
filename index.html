@@ -10,10 +10,9 @@
     --teal: #03363f;
     --teal2: #0a4a55;
     --cream: #e6e4d6;
-    --card: #647a60;
+    --card: #9aa795;   /* zielony tła bloków - taki jak w grafikach fundacji */
     --ink: #12302f;
     --muted: #455653;
-    --line: #cfd3c4;
     --error: #a3231b;
     --ok-bg: #e1eadf;
   }
@@ -37,7 +36,7 @@
   }
   .lead { margin: 6px 0 0; color: var(--teal); font-weight: 500; }
   main { padding: 18px 0 28px; display: grid; gap: 20px; }
-  .card { background: var(--card); color: #fff; border-radius: 14px; padding: 22px; }
+  .card { background: var(--card); color: #fff; font-weight: 500; border-radius: 14px; padding: 22px; }
   .card h2 {
     display: inline-block; margin: 0 0 12px;
     background: var(--teal); color: #fff;
@@ -57,7 +56,9 @@
   .more { margin: 16px 0 0; }
   .more a { text-decoration: underline; }
   .card a { color: #fff; font-weight: 600; }
-  .count { color: #fff; font-size: .93rem; margin: 18px 0 14px; }
+  .count { color: #fff; font-size: .93rem; margin: 18px 0 0; }
+  .card > button { margin-top: 18px; }
+  .card > .count + button { margin-top: 12px; }
   button, .btn {
     font: inherit; font-weight: 700;
     background: var(--cream); color: var(--teal);
@@ -69,13 +70,17 @@
   button.secondary { background: transparent; color: #fff; border: 2px solid #fff; }
   button.secondary:hover { background: rgba(255,255,255,.18); }
   :focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
-  form { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.45); display: grid; gap: 14px; }
+  form { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.55); display: grid; gap: 14px; }
   label { display: grid; gap: 4px; font-weight: 600; font-size: .93rem; }
   input[type=text], input[type=email] {
     font: inherit; font-weight: 400; width: 100%;
-    padding: 11px 12px; border: 1px solid #8e9889; border-radius: 8px; background: #fff;
+    padding: 11px 12px; border: 1px solid #8e9889; border-radius: 8px; background: #fff; color: var(--ink);
   }
-  .consent { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-weight: 400; font-size: .9rem; }
+  fieldset.picker { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+  fieldset.picker legend { font-weight: 700; margin-bottom: 6px; padding: 0; }
+  label.opt { display: flex; gap: 10px; align-items: center; background: var(--cream); color: var(--ink); padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: .97rem; }
+  label.opt input { width: 20px; height: 20px; flex: none; }
+  .consent { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-weight: 500; font-size: .9rem; }
   .consent input { width: 20px; height: 20px; margin-top: 3px; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .error { color: var(--error); font-weight: 600; margin: 0; }
@@ -83,8 +88,11 @@
   .error:empty { display: none; }
   .success { background: var(--ok-bg); color: var(--ink); border-radius: 10px; padding: 16px; margin-top: 16px; }
   .success h3 { margin: 0 0 6px; }
+  .success ul { margin: 6px 0; padding-left: 20px; }
+  .success a { color: var(--teal); }
   .linkbox { display: grid; gap: 8px; margin-top: 10px; }
   .linkbox input { font: inherit; font-size: .85rem; width: 100%; padding: 10px; border: 1px solid #8e9889; border-radius: 8px; background: #fff; }
+  .success button.secondary { color: var(--teal); border-color: var(--teal); }
   .muted, .empty { color: var(--teal); }
   footer { padding: 4px 0 36px; color: var(--teal); font-size: .88rem; text-align: center; }
   footer a { color: inherit; font-weight: 600; }
@@ -163,6 +171,8 @@ const ERRORS = {
   workshop_unavailable: 'Ten warsztat nie przyjmuje już zapisów. Odśwież stronę.',
   already_signed_up: 'Ten adres e-mail jest już zapisany na ten warsztat.',
   invalid_data: 'Sprawdź, czy imię, nazwisko i adres e-mail są poprawne.',
+  session_required: 'Wybierz termin, na który chcesz się zapisać.',
+  invalid_session: 'Wybrany termin jest już niedostępny. Odśwież stronę i wybierz inny.',
   not_found: 'Nie znaleziono zapisu. Link mógł wygasnąć lub być niepoprawny.'
 };
 const errText = (e) => ERRORS[e.message] || 'Coś poszło nie tak. Spróbuj ponownie za chwilę.';
@@ -191,7 +201,11 @@ function renderWorkshops(list) {
 }
 
 function workshopCard(w) {
-  const countEl = h('span', {}, w.participant_count);
+  const mode = w.signup_mode || 'all';      // all = wszystkie terminy, one = jeden termin, any = dowolne terminy
+  const now = Date.now();
+  const sessions = (w.sessions || []).filter((s) => mode === 'all' || new Date(s.starts_at).getTime() > now);
+  const countEls = {};                       // liczniki zapisanych osób per termin
+  const totalEl = h('span', {}, w.participant_count);
   const formBox = h('div');
   const btn = h('button', { type: 'button', 'aria-expanded': 'false' }, 'Zapisz się');
   btn.addEventListener('click', () => {
@@ -200,7 +214,7 @@ function workshopCard(w) {
       btn.textContent = 'Zapisz się';
       btn.setAttribute('aria-expanded', 'false');
     } else {
-      formBox.append(signupForm(w, formBox, countEl, btn));
+      formBox.append(signupForm(w, mode, sessions, formBox, countEls, totalEl, btn));
       btn.textContent = 'Zamknij formularz';
       btn.setAttribute('aria-expanded', 'true');
       formBox.querySelector('input[name=full_name]').focus();
@@ -208,31 +222,43 @@ function workshopCard(w) {
   });
 
   const safeUrl = w.more_info_url && /^https?:\/\//i.test(w.more_info_url) ? w.more_info_url : null;
+  const whenLabel = mode === 'one' ? 'Terminy – wybierz jeden' : mode === 'any' ? 'Terminy – możesz wybrać kilka' : 'Kiedy';
 
   return h('article', { class: 'card' },
     h('h2', {}, w.title),
     w.description && h('p', { class: 'desc' }, w.description),
-    info('Kiedy', h('ul', { class: 'sessions' },
-      (w.sessions || []).map((s) =>
-        h('li', {}, sessionLabel(s),
+    info(whenLabel, h('ul', { class: 'sessions' },
+      sessions.map((s) => {
+        const c = h('span', {}, s.participant_count || 0);
+        countEls[s.id] = c;
+        return h('li', {}, sessionLabel(s),
           s.location && h('span', { class: 'note' }, `Miejsce: ${s.location}`),
-          s.note && h('span', { class: 'note' }, s.note))))),
+          s.note && h('span', { class: 'note' }, s.note),
+          mode !== 'all' && h('span', { class: 'note' }, 'Zapisane osoby: ', c));
+      }))),
     w.location && info('Gdzie', w.location),
     w.facilitator && info('Kto prowadzi', w.facilitator),
     w.audience && info('Dla kogo', w.audience),
     w.cost && info('Udział', w.cost),
     safeUrl && h('p', { class: 'more' }, h('a', { href: safeUrl, target: '_blank', rel: 'noopener' }, 'Więcej informacji')),
-    h('p', { class: 'count' }, 'Zapisane osoby: ', countEl),
+    mode === 'all' && h('p', { class: 'count' }, 'Zapisane osoby: ', totalEl),
     btn,
     formBox);
 }
 
-function signupForm(w, formBox, countEl, btn) {
+function signupForm(w, mode, sessions, formBox, countEls, totalEl, btn) {
   const err = h('p', { class: 'error', role: 'alert' });
   const submit = h('button', { type: 'submit' }, 'Wyślij zgłoszenie');
   const id = `c-${w.id}`;
 
+  const picker = mode !== 'all' && h('fieldset', { class: 'picker' },
+    h('legend', {}, mode === 'one' ? 'Wybierz termin' : 'Wybierz terminy'),
+    sessions.map((s) => h('label', { class: 'opt' },
+      h('input', { type: mode === 'one' ? 'radio' : 'checkbox', name: 'session', value: s.id }),
+      h('span', {}, sessionLabel(s)))));
+
   const form = h('form', { novalidate: true },
+    picker,
     h('label', {}, 'Imię i nazwisko',
       h('input', { type: 'text', name: 'full_name', autocomplete: 'name', required: true, maxlength: '120' })),
     h('label', {}, 'Adres e-mail',
@@ -241,7 +267,7 @@ function signupForm(w, formBox, countEl, btn) {
       h('label', {}, 'Nie wypełniaj tego pola', h('input', { type: 'text', name: 'website', tabindex: '-1', autocomplete: 'off' }))),
     h('div', { class: 'consent' },
       h('input', { type: 'checkbox', name: 'consent', id }),
-      h('label', { for: id, style: 'font-weight:400' },
+      h('label', { for: id, style: 'font-weight:500' },
         `Wyrażam zgodę na przetwarzanie mojego imienia, nazwiska i adresu e-mail przez ${CONFIG.FOUNDATION_NAME} w celu obsługi zapisu na ten warsztat oraz kontaktu w jego sprawie (np. przypomnienie, zmiana terminu). `,
         CONFIG.PRIVACY_URL && h('a', { href: CONFIG.PRIVACY_URL, target: '_blank', rel: 'noopener' }, 'Polityka prywatności'),
         ' Mogę zrezygnować w każdej chwili.')),
@@ -253,6 +279,8 @@ function signupForm(w, formBox, countEl, btn) {
     err.textContent = '';
     const name = form.full_name.value.trim();
     const email = form.email.value.trim();
+    const chosenIds = mode === 'all' ? [] : [...form.querySelectorAll('input[name=session]:checked')].map((i) => i.value);
+    if (mode !== 'all' && !chosenIds.length) { err.textContent = ERRORS.session_required; return; }
     if (!name) { err.textContent = 'Wpisz imię i nazwisko.'; form.full_name.focus(); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Wpisz poprawny adres e-mail.'; form.email.focus(); return; }
     if (!form.consent.checked) { err.textContent = ERRORS.consent_required; return; }
@@ -261,10 +289,15 @@ function signupForm(w, formBox, countEl, btn) {
     submit.disabled = true;
     submit.textContent = 'Wysyłanie…';
     try {
-      const res = await rpc('sign_up', { p_workshop_id: w.id, p_full_name: name, p_email: email, p_consent: true });
-      countEl.textContent = String(Number(countEl.textContent) + 1);
+      const res = await rpc('sign_up', {
+        p_workshop_id: w.id, p_full_name: name, p_email: email, p_consent: true,
+        p_session_ids: mode === 'all' ? null : chosenIds
+      });
+      if (mode === 'all') totalEl.textContent = String(Number(totalEl.textContent) + 1);
+      else chosenIds.forEach((sid) => { if (countEls[sid]) countEls[sid].textContent = String(Number(countEls[sid].textContent) + 1); });
+      const chosen = sessions.filter((s) => chosenIds.includes(s.id)).map(sessionLabel);
       btn.remove();
-      formBox.replaceChildren(successBox(w, res.cancel_token, email));
+      formBox.replaceChildren(successBox(w, res.cancel_token, email, chosen));
     } catch (ex) {
       err.textContent = errText(ex);
       submit.disabled = false;
@@ -274,11 +307,15 @@ function signupForm(w, formBox, countEl, btn) {
   return form;
 }
 
-function successBox(w, token, email) {
+function successBox(w, token, email, chosen) {
+  const common = [
+    h('h3', {}, 'Dziękujemy, jesteś zapisany/a!'),
+    h('p', {}, `Zapisaliśmy Cię na warsztat „${w.title}”.`),
+    chosen && chosen.length ? h('div', {}, h('p', { style: 'margin:0' }, chosen.length > 1 ? 'Wybrane terminy:' : 'Wybrany termin:'),
+      h('ul', {}, chosen.map((c) => h('li', {}, c)))) : null
+  ];
   if (!CONFIG.SHOW_CANCEL_LINK) {
-    return h('div', { class: 'success', role: 'status' },
-      h('h3', {}, 'Dziękujemy, jesteś zapisany/a!'),
-      h('p', {}, `Zapisaliśmy Cię na warsztat „${w.title}”.`),
+    return h('div', { class: 'success', role: 'status' }, common,
       h('p', {}, `Wysłaliśmy potwierdzenie na adres ${email}. W wiadomości znajdziesz przycisk, którym możesz zrezygnować z udziału. Jeśli nie widzisz maila, sprawdź folder spam.`));
   }
   const link = `${location.origin}${location.pathname}?anuluj=${token}`;
@@ -288,9 +325,7 @@ function successBox(w, token, email) {
     try { await navigator.clipboard.writeText(link); copy.textContent = 'Skopiowano'; }
     catch (e) { input.select(); }
   });
-  return h('div', { class: 'success', role: 'status' },
-    h('h3', {}, 'Dziękujemy, jesteś zapisany/a!'),
-    h('p', {}, `Zapisaliśmy Cię na warsztat „${w.title}”.`),
+  return h('div', { class: 'success', role: 'status' }, common,
     h('p', {}, 'Jeśli będziesz chcieć zrezygnować, użyj osobistego linku poniżej. Zachowaj go.'),
     h('div', { class: 'linkbox' }, input, copy));
 }
@@ -321,7 +356,7 @@ async function renderCancel(token) {
     });
     app.replaceChildren(h('article', { class: 'card' },
       h('h2', {}, 'Rezygnacja z warsztatu'),
-      h('p', {}, `Czy na pewno chcesz zrezygnować z udziału w warsztacie „${infoRow.workshop_title}”?`),
+      h('p', {}, `Czy na pewno chcesz zrezygnować z udziału w warsztacie „${infoRow.workshop_title}”? Zrezygnujesz ze wszystkich wybranych terminów.`),
       err, yes, ' ', h('a', { href: location.pathname, style: 'margin-left:12px' }, 'Nie, zostaję')));
   } catch (ex) {
     app.replaceChildren(h('article', { class: 'card' }, h('h2', {}, 'Nie znaleziono zapisu'), h('p', {}, errText(ex)), back));
