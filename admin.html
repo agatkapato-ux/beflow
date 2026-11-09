@@ -66,7 +66,7 @@ const CONFIG = {
 };
 const TZ = 'Europe/Warsaw';
 const root = document.getElementById('root');
-const state = { workshops: [], openParticipants: new Set(), message: '' };
+const state = { workshops: [], openParticipants: new Set(), openCompose: new Set(), message: '' };
 const MODE_LABELS = {
   all: 'Na wszystkie terminy (cykl spotkań)',
   one: 'Uczestnik wybiera jeden termin',
@@ -238,6 +238,7 @@ function topbar() {
     h('div', { class: 'row' },
       h('span', { class: 'muted' }, session && session.email),
       h('a', { class: 'btn secondary small', href: 'index.html', target: '_blank', rel: 'noopener' }, 'Strona zapisów'),
+      h('a', { class: 'btn secondary small', href: 'wyniki-ankiet.html' }, 'Wyniki ankiet'),
       h('button', { class: 'secondary small', onclick: () => { clearSession(); renderLogin(); } }, 'Wyloguj')));
 }
 
@@ -287,10 +288,64 @@ function workshopCard(w, now) {
       s.location ? ` · ${s.location}` : '', s.note ? ` · ${s.note}` : ''))),
     h('div', { class: 'row' },
       h('button', { class: 'small', onclick: () => renderEditor(w) }, 'Edytuj'), toggle,
-      active.length > 0 && h('button', { class: 'secondary small', onclick: () => renderCompose(w) }, 'Wyślij wiadomość'),
+      active.length > 0 && h('button', { class: 'secondary small', onclick: () => {
+        state.openCompose.has(w.id) ? state.openCompose.delete(w.id) : state.openCompose.add(w.id); renderList(); } },
+        state.openCompose.has(w.id) ? 'Zamknij wiadomość' : 'Napisz do uczestników'),
       publish, del),
     err,
+    state.openCompose.has(w.id) && composePanel(w),
     open && participantsPanel(w));
+}
+
+// ---------- Wiadomość do uczestników ----------
+function composePanel(w) {
+  const active = activeSignups(w);
+  const status = h('p', { role: 'status', style: 'margin:0' });
+  const err = h('p', { class: 'error', role: 'alert' });
+  const target = h('select', { name: 'target' },
+    h('option', { value: '' }, `Wszyscy zapisani (${active.length})`),
+    w.signup_mode !== 'all' ? w.sessions.map((s) => h('option', { value: s.id }, `Tylko termin: ${sessionLabel(s)} (${attendeesOf(w, s.id).length})`)) : null);
+  const subject = h('input', { type: 'text', maxlength: '150', placeholder: 'np. Zmiana godziny warsztatu' });
+  const message = h('textarea', { maxlength: '5000', style: 'min-height:140px', placeholder: 'Treść wiadomości…' });
+  const send = h('button', { type: 'button' }, 'Wyślij wiadomość');
+
+  send.addEventListener('click', async () => {
+    err.textContent = ''; status.textContent = '';
+    const count = target.value ? attendeesOf(w, target.value).length : active.length;
+    if (!subject.value.trim()) { err.textContent = 'Wpisz temat wiadomości.'; subject.focus(); return; }
+    if (!message.value.trim()) { err.textContent = 'Wpisz treść wiadomości.'; message.focus(); return; }
+    if (!count) { err.textContent = 'Brak odbiorców.'; return; }
+    if (!confirm(`Wysłać tę wiadomość do ${count} osób? Tej operacji nie można cofnąć.`)) return;
+    send.disabled = true;
+    send.textContent = 'Wysyłanie… (może potrwać chwilę)';
+    try {
+      await ensureSession();
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/send-emails`, {
+        method: 'POST',
+        headers: { apikey: CONFIG.SUPABASE_KEY, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'broadcast', workshop_id: w.id, session_id: target.value || null,
+          subject: subject.value.trim(), message: message.value.trim() })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      status.textContent = `Wysłano: ${data.sent}.` + (data.failed ? ` Nie udało się wysłać do: ${data.failed} osób.` : '');
+      status.className = 'ok';
+      subject.value = ''; message.value = '';
+    } catch (e) {
+      err.textContent = e.message === 'no_session' ? 'Sesja wygasła. Zaloguj się ponownie.' : `Nie udało się wysłać: ${e.message}`;
+    }
+    send.disabled = false;
+    send.textContent = 'Wyślij wiadomość';
+  });
+
+  return h('div', { class: 'card', style: 'background:#f7f8f4;margin-top:12px' },
+    h('h3', { class: 'sess-h', style: 'margin-top:0' }, 'Wiadomość do uczestników'),
+    h('div', { style: 'display:grid;gap:12px' },
+      h('label', {}, 'Do kogo', target),
+      h('label', {}, 'Temat', subject),
+      h('label', {}, 'Treść', message),
+      h('p', { class: 'muted', style: 'margin:0' }, 'Każda osoba dostaje wiadomość osobno, z przyciskiem rezygnacji. Odpowiedzi trafią na adres fundacji.'),
+      err, status, h('div', {}, send)));
 }
 
 // ---------- Uczestnicy ----------
@@ -445,7 +500,7 @@ function renderEditor(w) {
     h('div', {}, h('strong', {}, 'Terminy'), h('p', { class: 'muted', style: 'margin:2px 0 8px' }, 'Warsztat jednorazowy ma jeden termin, kilka terminów to cykl lub kilka do wyboru. Godziny w czasie polskim.'), rowsBox,
       h('div', { class: 'row', style: 'margin-top:10px' }, addOne, h('span', { class: 'muted' }, 'lub'), addWeekly, repeatStep, h('span', { class: 'muted' }, 'razy:'), repeatN)),
     h('label', { class: 'check' }, h('input', { type: 'checkbox', name: 'published', checked: w ? w.is_published : true }), 'Widoczny na stronie zapisów'),
-    !isNew && h('p', { class: 'notice' }, 'Uwaga: zmiana terminu lub opisu nie wysyła automatycznie wiadomości do uczestników. Po zapisaniu zmian użyj przycisku „Wyślij wiadomość” przy warsztacie, żeby ich poinformować.'),
+    !isNew && h('p', { class: 'notice' }, 'Uwaga: zmiana terminu lub opisu nie wysyła automatycznie wiadomości do uczestników. Po zapisaniu zmian użyj przycisku „Napisz do uczestników”.'),
     err,
     h('div', { class: 'row' }, h('button', { type: 'submit' }, isNew ? 'Utwórz warsztat' : 'Zapisz zmiany'),
       h('button', { type: 'button', class: 'secondary', onclick: renderList }, 'Anuluj')));
@@ -497,54 +552,6 @@ function renderEditor(w) {
 
   root.replaceChildren(topbar(), h('div', { class: 'card' }, h('h2', {}, isNew ? 'Nowy warsztat' : 'Edycja warsztatu'), form));
   form.title.focus();
-}
-
-// ---------- Widok: wiadomość do uczestników ----------
-function renderCompose(w) {
-  const active = activeSignups(w);
-  const err = h('p', { class: 'error', role: 'alert' });
-  const options = [h('option', { value: '' }, `Wszyscy zapisani na warsztat (${active.length})`)];
-  if (w.signup_mode !== 'all') {
-    w.sessions.forEach((s) => options.push(h('option', { value: s.id }, `Tylko termin: ${sessionLabel(s)} (${attendeesOf(w, s.id).length})`)));
-  }
-  const submit = h('button', { type: 'submit' }, 'Wyślij wiadomość');
-  const form = h('form', { class: 'grid', novalidate: true },
-    h('label', {}, 'Do kogo', h('select', { name: 'target' }, options)),
-    h('label', {}, 'Temat', h('input', { type: 'text', name: 'subject', maxlength: '150', required: true, placeholder: 'np. Zmiana godziny warsztatu' })),
-    h('label', {}, 'Treść wiadomości', h('textarea', { name: 'message', maxlength: '5000', required: true, style: 'min-height:160px' })),
-    h('p', { class: 'muted' }, 'Każda osoba dostaje wiadomość osobno, więc adresy innych uczestników nie są widoczne. Do wiadomości dodamy nazwę warsztatu i link do rezygnacji.'),
-    err,
-    h('div', { class: 'row' }, submit, h('button', { type: 'button', class: 'secondary', onclick: renderList }, 'Anuluj')));
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault(); err.textContent = '';
-    const subject = form.subject.value.trim();
-    const message = form.message.value.trim();
-    if (!subject) { err.textContent = 'Wpisz temat.'; form.subject.focus(); return; }
-    if (!message) { err.textContent = 'Wpisz treść wiadomości.'; form.message.focus(); return; }
-    const targetId = form.target.value || null;
-    const n = targetId ? attendeesOf(w, targetId).length : active.length;
-    if (!confirm(`Wysłać wiadomość do ${n} os.?`)) return;
-    submit.disabled = true; submit.textContent = 'Wysyłanie…';
-    try {
-      await ensureSession();
-      const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/send-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: CONFIG.SUPABASE_KEY, Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ type: 'broadcast', workshop_id: w.id, session_id: targetId, subject, message })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      state.message = `Wiadomość wysłana do ${data.sent} os.`;
-      renderList();
-    } catch (ex) {
-      err.textContent = ex.message === 'no_session' ? 'Sesja wygasła. Zaloguj się ponownie.' : `Nie udało się wysłać: ${ex.message}`;
-      submit.disabled = false; submit.textContent = 'Wyślij wiadomość';
-    }
-  });
-
-  root.replaceChildren(topbar(), h('div', { class: 'card' }, h('h2', {}, `Wiadomość: ${w.title}`), form));
-  form.subject.focus();
 }
 
 // ---------- Start ----------
