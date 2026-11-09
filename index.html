@@ -361,7 +361,8 @@ function successBox(w, token, email, chosen) {
     h('h3', {}, 'Dziękujemy, jesteś zapisany/a!'),
     h('p', {}, `Zapisaliśmy Cię na warsztat „${w.title}”.`),
     chosen && chosen.length ? h('div', {}, h('p', { style: 'margin:0' }, chosen.length > 1 ? 'Wybrane terminy:' : 'Wybrany termin:'),
-      h('ul', {}, chosen.map((c) => h('li', {}, c)))) : null
+      h('ul', {}, chosen.map((c) => h('li', {}, c)))) : null,
+    h('p', {}, 'Przed warsztatem prosimy o wypełnienie krótkiej ankiety: ', h('a', { href: 'survey.html' }, 'Ankieta PRE'), '.')
   ];
   if (!CONFIG.SHOW_CANCEL_LINK) {
     return h('div', { class: 'success', role: 'status' }, common,
