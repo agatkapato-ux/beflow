@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ankieta PRE – Fundacja BeFlow</title>
+<style>
+  :root { --teal:#03363f; --teal2:#0a4a55; --cream:#e6e4d6; --card:#9ba795; --ink:#12302f; --error:#a3231b; --ok-bg:#e1eadf; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink); font:17px/1.55 Montserrat, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 16px 0 8px; }
+  .back { text-align:right; margin-bottom: 14px; }
+  .back a { font-size:.85rem; font-weight:600; color:var(--teal); border:2px solid var(--teal); border-radius:8px; padding:6px 12px; text-decoration:none; display:inline-block; }
+  .back a:hover { background:var(--teal); color:#fff; }
+  .brand { text-align:center; margin-bottom:26px; min-height:44px; }
+  .brand img { height:56px; width:auto; max-width:100%; }
+  .brand-text { font-weight:600; font-size:1.5rem; letter-spacing:.04em; color:var(--teal); text-transform:uppercase; }
+  h1 { display:inline-block; margin:0 0 10px; background:var(--teal); color:#fff; font-size:1.5rem; line-height:1.25; text-transform:uppercase; font-weight:800; padding:8px 14px; }
+  .lead { margin:6px 0 0; color:var(--teal); font-weight:500; }
+  main { padding:18px 0 28px; display:grid; gap:18px; grid-template-columns:minmax(0,1fr); }
+  .card { background:var(--card); color:#fff; font-weight:500; border-radius:14px; padding:22px; }
+  .card h2 { display:inline-block; margin:0 0 12px; background:var(--teal); color:#fff; font-size:1.05rem; line-height:1.35; font-weight:800; padding:7px 12px; }
+  .card .hint { margin:0 0 10px; font-size:.9rem; }
+  .card a { color:#fff; font-weight:600; }
+  fieldset { border:0; margin:0; padding:0; display:grid; gap:8px; }
+  label.opt { display:flex; gap:10px; align-items:center; background:var(--cream); color:var(--ink); padding:10px 12px; border-radius:8px; cursor:pointer; font-weight:500; font-size:.97rem; }
+  label.opt input { width:20px; height:20px; flex:none; }
+  input[type=text], textarea, select { font:inherit; font-weight:400; width:100%; padding:11px 12px; border:1px solid #8e9889; border-radius:8px; background:#fff; color:var(--ink); }
+  textarea { min-height:100px; resize:vertical; }
+  .other { margin-top:2px; }
+  .scale { display:flex; gap:6px; flex-wrap:nowrap; }
+  .scale label { flex:1 1 0; min-width:0; display:grid; justify-items:center; gap:2px; background:var(--cream); color:var(--ink); border-radius:8px; padding:8px 4px; cursor:pointer; font-weight:700; font-size:.95rem; text-align:center; }
+  .scale label small { font-weight:500; font-size:.62rem; overflow-wrap:anywhere; line-height:1.15; min-height:1.7em; }
+  .scale input { width:20px; height:20px; }
+  .stmt { background:rgba(255,255,255,.14); border-radius:10px; padding:12px; display:grid; gap:8px; }
+  .stmt + .stmt { margin-top:8px; }
+  .stmt > span { font-weight:600; }
+  .legend { display:flex; justify-content:space-between; font-size:.78rem; gap:8px; }
+  button, .btn { font:inherit; font-weight:700; background:var(--teal); color:#fff; border:0; border-radius:10px; padding:12px 24px; cursor:pointer; min-height:48px; text-decoration:none; display:inline-flex; align-items:center; }
+  button:hover { background:var(--teal2); }
+  button:disabled { opacity:.6; cursor:default; }
+  :focus-visible { outline:3px solid #f0b429; outline-offset:2px; }
+  .error { color:var(--error); font-weight:600; margin:0; background:#fff; padding:8px 12px; border-radius:8px; }
+  .error:empty { display:none; }
+  .success { background:var(--ok-bg); color:var(--ink); border-radius:12px; padding:20px; }
+  .success h2 { margin:0 0 8px; font-size:1.3rem; }
+  .priv { color:var(--teal); font-size:.88rem; }
+  .paper { color:var(--teal); font-size:.95rem; }
+  .paper a { color:var(--teal); font-weight:700; }
+  .hp { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  footer { padding:4px 0 36px; color:var(--teal); font-size:.88rem; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="back"><a href="index.html">← Zapisy na warsztaty</a></div>
+    <div class="brand" id="brand"><span class="brand-text" id="brandText">Fundacja BeFlow</span></div>
+    <h1>Ankieta PRE</h1>
+    <p class="lead">przed udziałem w warsztatach / spotkaniu sieciującym</p>
+  </header>
+  <main id="app"></main>
+  <footer id="footer">Fundacja BeFlow</footer>
+</div>
+
+<script>
+const CONFIG = {
+  SUPABASE_URL: 'https://rsqwcvbixkdfcxfgwhym.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_VDS7OzDzHnpGkFCKgigIKQ_Dn0yC54p',
+  FOUNDATION_NAME: 'Fundacja BeFlow',
+  LOGO: 'img/logo.png',
+  PAPER_FILE: 'ankieta-PRE.docx'   // wersja do pobrania i wypełnienia ręcznie
+};
+
+// ---------- Pytania (te same klucze używa strona z wynikami) ----------
+const Q = {
+  q1: { type: 'single', text: '1. W jakiej formie bierze Pani/Pan udział?', required: true, options: [
+    ['warsztaty', 'warsztaty dla specjalistów'], ['sieciujace', 'spotkanie sieciujące specjalistów (superwizja)']] },
+  q2: { type: 'multi', text: '2. W jakim obszarze Pani/Pan pracuje?', options: [
+    ['pomoc_spoleczna', 'pomoc społeczna'], ['psychologia', 'psychologia / psychoterapia'], ['pedagogika', 'pedagogika / edukacja'],
+    ['interwencja', 'interwencja kryzysowa'], ['zdrowie', 'ochrona zdrowia'], ['ngo', 'organizacja pozarządowa'],
+    ['rodzina', 'praca z rodziną']], other: true },
+  q3: { type: 'matrix', text: '3. Jak ocenia Pani/Pan obecnie swoje funkcjonowanie w pracy pomocowej?', required: true,
+    scale: ['zdecydowanie nie', 'raczej nie', 'trudno powiedzieć', 'raczej tak', 'zdecydowanie tak'], items: [
+    ['s1', 'Rozpoznaję sygnały własnego przeciążenia w pracy'], ['s2', 'Potrafię stawiać granice w pracy pomocowej'],
+    ['s3', 'Mam sposoby dbania o własną równowagę w pracy'], ['s4', 'Mam możliwość konsultowania trudnych sytuacji zawodowych'],
+    ['s5', 'Wiem, gdzie szukać wsparcia w trudnej sytuacji zawodowej']] },
+  q4: { type: 'scale', text: '4. Jak ocenia Pani/Pan obecnie współpracę i wymianę doświadczeń z innymi specjalistami?', required: true,
+    scale: ['bardzo nisko', '', '', '', 'bardzo wysoko'] },
+  q5: { type: 'multi', text: '5. W jakich obszarach chciałaby/chciałby Pani/Pan rozwinąć swoje kompetencje lub znaleźć nowe rozwiązania?', options: [
+    ['rownowaga', 'dbanie o własną równowagę i dobrostan'], ['granice', 'granice w pracy pomocowej'],
+    ['trudne_sytuacje', 'trudne sytuacje zawodowe'], ['komunikacja', 'komunikacja z osobami korzystającymi ze wsparcia'],
+    ['wspolpraca', 'współpraca z innymi specjalistami i instytucjami'], ['wymiana', 'wymiana doświadczeń / konsultacje']], other: true },
+  q6: { type: 'single', text: '6. Czy widzi Pani/Pan obszar pracy, w którym chciałaby/chciałby Pani/Pan wprowadzić zmianę lub nowe rozwiązanie?',
+    options: [['tak', 'tak'], ['nie', 'nie'], ['trudno', 'trudno powiedzieć']],
+    follow: { key: 'q6_text', label: 'Jeśli tak, czego miałaby dotyczyć ta zmiana?' } },
+  q7: { type: 'multi', text: '7. Czego przede wszystkim oczekuje Pani/Pan po udziale w dzisiejszym spotkaniu?', options: [
+    ['wskazowki', 'praktycznych wskazówek'], ['refleksja', 'refleksji nad własnym funkcjonowaniem zawodowym'],
+    ['narzedzia', 'nowych sposobów pracy / narzędzi'], ['wymiana', 'wymiany doświadczeń'], ['kontakty', 'kontaktów i możliwości współpracy'],
+    ['wiedza', 'uporządkowania / poszerzenia wiedzy']], other: true },
+  q8: { type: 'text', text: '8. Co byłoby dla Pani/Pana najbardziej wartościowym efektem udziału w spotkaniu?' }
+};
+
+const app = document.getElementById('app');
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, '');
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) { if (kid == null || kid === false) continue; el.append(kid.nodeType ? kid : document.createTextNode(String(kid))); }
+  return el;
+}
+async function rpc(name, args) {
+  const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', apikey: CONFIG.SUPABASE_KEY }, body: JSON.stringify(args || {}) });
+  let data = null; try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((data && data.message) || 'network');
+  return data;
+}
+
+// ---------- Budowa formularza ----------
+function questionCard(key, q) {
+  const card = h('section', { class: 'card', 'data-q': key });
+  card.append(h('h2', {}, q.text));
+  if (q.type === 'single' || q.type === 'multi') {
+    const inputType = q.type === 'single' ? 'radio' : 'checkbox';
+    const fs = h('fieldset', {});
+    q.options.forEach(([v, label]) => fs.append(h('label', { class: 'opt' }, h('input', { type: inputType, name: key, value: v }), h('span', {}, label))));
+    if (q.other) {
+      fs.append(h('label', { class: 'opt' }, h('input', { type: 'checkbox', name: key + '_otherbox' }), h('span', {}, 'inne:')));
+      fs.append(h('input', { type: 'text', class: 'other', name: key + '_other', maxlength: '300', 'aria-label': 'Inne – opisz' }));
+    }
+    card.append(fs);
+    if (q.follow) card.append(h('p', { class: 'hint', style: 'margin-top:14px' }, q.follow.label),
+      h('textarea', { name: q.follow.key, maxlength: '2000' }));
+  } else if (q.type === 'scale') {
+    const row = h('div', { class: 'scale', role: 'radiogroup' });
+    q.scale.forEach((t, i) => row.append(h('label', {}, h('span', {}, String(i + 1)), h('input', { type: 'radio', name: key, value: String(i + 1) }), h('small', {}, t))));
+    card.append(row);
+  } else if (q.type === 'matrix') {
+    card.append(h('p', { class: 'hint' }, '1 – ' + q.scale[0] + ' · 2 – ' + q.scale[1] + ' · 3 – ' + q.scale[2] + ' · 4 – ' + q.scale[3] + ' · 5 – ' + q.scale[4]));
+    q.items.forEach(([k, label]) => {
+      const row = h('div', { class: 'scale', role: 'radiogroup', 'aria-label': label });
+      for (let i = 1; i <= 5; i++) row.append(h('label', {}, h('span', {}, String(i)), h('input', { type: 'radio', name: `${key}_${k}`, value: String(i) })));
+      card.append(h('div', { class: 'stmt' }, h('span', {}, label), row));
+    });
+  } else if (q.type === 'text') {
+    card.append(h('textarea', { name: key, maxlength: '2000' }));
+  }
+  return card;
+}
+
+function collect(form) {
+  const a = {};
+  for (const [key, q] of Object.entries(Q)) {
+    if (q.type === 'single') {
+      const c = form.querySelector(`input[name=${key}]:checked`); if (c) a[key] = c.value;
+    } else if (q.type === 'multi') {
+      a[key] = [...form.querySelectorAll(`input[name=${key}]:checked`)].map((i) => i.value);
+      const ob = form.querySelector(`input[name=${key}_otherbox]`);
+      const ot = form.querySelector(`input[name=${key}_other]`);
+      if (ob && ot && (ob.checked || ot.value.trim()) && ot.value.trim()) a[key + '_other'] = ot.value.trim();
+    } else if (q.type === 'scale') {
+      const c = form.querySelector(`input[name=${key}]:checked`); if (c) a[key] = Number(c.value);
+    } else if (q.type === 'matrix') {
+      a[key] = {};
+      q.items.forEach(([k]) => { const c = form.querySelector(`input[name=${key}_${k}]:checked`); if (c) a[key][k] = Number(c.value); });
+    } else if (q.type === 'text') {
+      const t = form.querySelector(`textarea[name=${key}]`).value.trim(); if (t) a[key] = t;
+    }
+    if (q.follow) { const t = form.querySelector(`textarea[name=${q.follow.key}]`).value.trim(); if (t) a[q.follow.key] = t; }
+  }
+  return a;
+}
+
+function validate(a) {
+  if (!a.q1) return 'Odpowiedz na pytanie 1.';
+  if (!a.q3 || Object.keys(a.q3).length < Q.q3.items.length) return 'W pytaniu 3 oceń wszystkie stwierdzenia.';
+  if (!a.q4) return 'Odpowiedz na pytanie 4.';
+  return '';
+}
+
+async function render() {
+  let workshops = [];
+  try { workshops = await rpc('get_workshops'); } catch (e) { /* lista warsztatów jest opcjonalna */ }
+  const pre = new URLSearchParams(location.search).get('w');
+
+  const wsSelect = h('select', { name: 'workshop', 'aria-label': 'Warsztat' },
+    h('option', { value: '' }, 'Wybierz warsztat (opcjonalnie)'),
+    workshops.map((w) => h('option', { value: w.id }, w.title)));
+  if (pre && workshops.some((w) => w.id === pre)) wsSelect.value = pre;
+
+  const err = h('p', { class: 'error', role: 'alert' });
+  const submit = h('button', { type: 'submit' }, 'Wyślij ankietę');
+  const form = h('form', { novalidate: true, style: 'display:grid;gap:18px' },
+    h('p', { class: 'priv' }, 'Cel ankiety: poznanie doświadczeń, potrzeb i oczekiwań osób pracujących pomocowo. Ankieta nie jest testem wiedzy. ',
+      'Jest anonimowa: nie pytamy o imię, nazwisko ani e-mail. Prosimy, by w polach opisowych nie podawać danych identyfikujących Panią/Pana ani inne osoby.'),
+    h('p', { class: 'paper' }, 'Wolisz wersję papierową? ', h('a', { href: CONFIG.PAPER_FILE, download: '' }, 'Pobierz ankietę (Word)'),
+      ' – wypełnij i przekaż osobie prowadzącej.'),
+    h('section', { class: 'card' }, h('h2', {}, 'Warsztat / spotkanie'), wsSelect),
+    Object.entries(Q).map(([k, q]) => questionCard(k, q)),
+    h('div', { class: 'hp', 'aria-hidden': 'true' }, h('input', { type: 'text', name: 'website', tabindex: '-1', autocomplete: 'off' })),
+    err, h('div', {}, submit));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); err.textContent = '';
+    if (form.website.value) return;
+    const answers = collect(form);
+    const bad = validate(answers);
+    if (bad) { err.textContent = bad; return; }
+    submit.disabled = true; submit.textContent = 'Wysyłanie…';
+    try {
+      await rpc('submit_survey', { p_form: 'pre', p_workshop_id: wsSelect.value || null, p_answers: answers });
+      app.replaceChildren(h('div', { class: 'success', role: 'status' },
+        h('h2', {}, 'Dziękujemy!'), h('p', {}, 'Twoja ankieta została zapisana. Do zobaczenia na warsztacie.'),
+        h('p', {}, h('a', { href: 'index.html', style: 'color:var(--teal);font-weight:700' }, '← Wróć do zapisów'))));
+      window.scrollTo(0, 0);
+    } catch (ex) {
+      err.textContent = 'Nie udało się wysłać ankiety. Spróbuj ponownie za chwilę.';
+      submit.disabled = false; submit.textContent = 'Wyślij ankietę';
+    }
+  });
+  app.replaceChildren(form);
+}
+
+// Logo
+const logo = h('img', { src: CONFIG.LOGO, alt: CONFIG.FOUNDATION_NAME });
+logo.addEventListener('load', () => { document.getElementById('brandText').hidden = true; document.getElementById('brand').append(logo); });
+render();
+</script>
+</body>
+</html>
