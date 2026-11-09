@@ -24,7 +24,11 @@
     font: 17px/1.55 Montserrat, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
-  header { padding: 28px 0 8px; }
+  header { padding: 16px 0 8px; }
+  .staff-row { text-align: right; margin-bottom: 14px; }
+  .staff-link { display: inline-block; font-size: .85rem; font-weight: 600; color: var(--teal); border: 2px solid var(--teal);
+    border-radius: 8px; padding: 6px 12px; text-decoration: none; }
+  .staff-link:hover { background: var(--teal); color: #fff; }
   .brand { text-align: center; margin-bottom: 26px; min-height: 44px; }
   .brand img { height: 56px; width: auto; max-width: 100%; }
   .brand .brand-text { font-weight: 600; font-size: 1.5rem; letter-spacing: .04em; color: var(--teal); text-transform: uppercase; }
@@ -114,6 +118,7 @@
 <body>
 <div class="wrap">
   <header>
+    <div class="staff-row"><a class="staff-link" href="admin.html">Logowanie dla pracowników</a></div>
     <div class="brand" id="brand"><span class="brand-text" id="brandText">Fundacja BeFlow</span></div>
     <h1>Zapisy na warsztaty</h1>
     <p class="lead">Wybierz warsztat i zapisz się w kilka chwil.</p>
